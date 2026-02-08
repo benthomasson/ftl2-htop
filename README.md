@@ -25,20 +25,23 @@ await ftl.webservers.dnf(name="python3-psutil", state="present")
 ## Usage
 
 ```bash
-# Monitor all hosts in inventory
+# Run directly with uvx (no install needed)
+uvx --from "git+https://github.com/benthomasson/ftl2-htop" ftl2-htop -i inventory.yml
+
+# Or run from a local clone
 uv run ftl2_htop.py -i inventory.yml
 
 # Monitor specific groups
-uv run ftl2_htop.py -i inventory.yml -g webservers databases
+ftl2-htop -i inventory.yml -g webservers databases
 
 # Faster sampling (1 second)
-uv run ftl2_htop.py -i inventory.yml --interval 1
+ftl2-htop -i inventory.yml --interval 1
 
 # Skip process list (less bandwidth)
-uv run ftl2_htop.py -i inventory.yml --no-processes
+ftl2-htop -i inventory.yml --no-processes
 
 # Debug mode — print raw events, no TUI
-uv run ftl2_htop.py -i inventory.yml --debug
+ftl2-htop -i inventory.yml --debug
 ```
 
 ## How It Works

@@ -1,0 +1,12 @@
+[project]
+name = "ftl2-htop"
+version = "0.1.0"
+description = "Distributed system monitor TUI built on FTL2"
+requires-python = ">=3.13"
+dependencies = [
+    "ftl2 @ git+https://github.com/benthomasson/ftl2",
+    "rich",
+]
+
+[project.scripts]
+ftl2-htop = "ftl2_htop:cli"

@@ -331,5 +331,9 @@ async def main() -> None:
                 pass
 
 
-if __name__ == "__main__":
+def cli():
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    cli()
