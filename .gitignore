@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.pyo
+.ftl2-state.json
+.ftl2-gate-cache/
