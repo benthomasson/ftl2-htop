@@ -16,9 +16,11 @@ Prerequisites:
 
 Usage:
     uv run ftl2_htop.py -i inventory.yml [options]
+    uv run ftl2_htop.py -S .ftl2-state.json [options]
 
 Options:
     -i, --inventory   Inventory file (hosts.yml)
+    -S, --state       State file (.ftl2-state.json) — loads hosts from state
     -g, --groups      Host groups to monitor (default: all groups)
     --interval        Metrics sampling interval in seconds (default: 2)
     --no-processes    Don't include process list (reduces bandwidth)
@@ -26,6 +28,7 @@ Options:
 
 Examples:
     uv run ftl2_htop.py -i inventory.yml
+    uv run ftl2_htop.py -S .ftl2-state.json -g scale
     uv run ftl2_htop.py -i inventory.yml -g webservers databases --interval 1
     uv run ftl2_htop.py -i inventory.yml --no-processes
     uv run ftl2_htop.py -i inventory.yml --debug
@@ -237,7 +240,10 @@ async def main() -> None:
         description="FTL2 distributed system monitor"
     )
     parser.add_argument(
-        "-i", "--inventory", required=True, help="Inventory file"
+        "-i", "--inventory", help="Inventory file"
+    )
+    parser.add_argument(
+        "-S", "--state", help="State file (loads hosts from state)"
     )
     parser.add_argument(
         "-g", "--groups", nargs="+", help="Host groups to monitor (default: all)"
@@ -260,7 +266,16 @@ async def main() -> None:
     )
     args = parser.parse_args()
 
-    async with automation(inventory=args.inventory, gate_subsystem=True) as ftl:
+    if not args.inventory and not args.state:
+        parser.error("either --inventory or --state is required")
+
+    automation_kwargs = {"gate_subsystem": True}
+    if args.inventory:
+        automation_kwargs["inventory"] = args.inventory
+    if args.state:
+        automation_kwargs["state_file"] = args.state
+
+    async with automation(**automation_kwargs) as ftl:
         # Determine groups to monitor
         if args.groups:
             groups = args.groups
