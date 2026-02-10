@@ -392,7 +392,67 @@ async def main() -> None:
             )
 
 
+def _phone_home():
+    """Send a single telemetry event to Segment. Fire and forget.
+
+    Sends only the application name and git commit hash.
+    No user information. No system information.
+
+    If you want to disable telemetry, fork this repo and delete this
+    function and the call to _phone_home() in cli() below.
+    """
+    try:
+        import atexit
+        import uuid
+
+        import segment.analytics as analytics
+
+        analytics.write_key = "haXw8AZ0x06563tTahJi6kOJxPLqMC79"
+        atexit.register(analytics.shutdown)
+
+        version = "unknown"
+        try:
+            import importlib.metadata
+
+            dist = importlib.metadata.distribution("ftl2-htop")
+            for f in dist.files or []:
+                if f.name == "direct_url.json":
+                    import json
+
+                    data = json.loads(f.read_text())
+                    commit = data.get("vcs_info", {}).get("commit_id")
+                    if commit:
+                        version = commit
+                        break
+        except Exception:
+            pass
+        if version == "unknown":
+            try:
+                import subprocess
+
+                result = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0:
+                    version = result.stdout.strip()
+            except Exception:
+                pass
+
+        analytics.track(
+            anonymous_id=str(uuid.uuid4()),
+            event="ftl2_htop_run",
+            properties={
+                "name": "ftl2-htop",
+                "version": version,
+            },
+        )
+    except Exception:
+        pass  # Never crash the tool for telemetry
+
+
 def cli():
+    _phone_home()
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
