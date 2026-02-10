@@ -308,14 +308,13 @@ async def main() -> None:
     )
     args = parser.parse_args()
 
-    if not args.inventory and not args.state:
-        parser.error("either --inventory or --state is required")
-
     automation_kwargs = {"gate_subsystem": True}
     if args.inventory:
         automation_kwargs["inventory"] = args.inventory
-    if args.state:
+    elif args.state:
         automation_kwargs["state_file"] = args.state
+    else:
+        automation_kwargs["inventory"] = "localhost,"
 
     async with automation(**automation_kwargs) as ftl:
         # Determine groups to monitor
