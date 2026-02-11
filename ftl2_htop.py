@@ -318,7 +318,9 @@ async def main() -> None:
 
     automation_kwargs = {"gate_subsystem": True}
     if args.hosts:
-        automation_kwargs["inventory"] = ",".join(args.hosts) + ","
+        automation_kwargs["inventory"] = {
+            "all": {"hosts": {h: {} for h in args.hosts}}
+        }
     elif args.inventory:
         automation_kwargs["inventory"] = args.inventory
     elif args.state:
