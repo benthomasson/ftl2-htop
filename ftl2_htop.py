@@ -15,10 +15,12 @@ Prerequisites:
         await ftl.hosts.dnf(name="python3-psutil", state="present")
 
 Usage:
+    uv run ftl2_htop.py host1 host2 host3 [options]
     uv run ftl2_htop.py -i inventory.yml [options]
     uv run ftl2_htop.py -S .ftl2-state.json [options]
 
 Options:
+    hosts             Hostnames to monitor (positional, builds inventory dynamically)
     -i, --inventory   Inventory file (hosts.yml)
     -S, --state       State file (.ftl2-state.json) — loads hosts from state
     -g, --groups      Host groups to monitor (default: all groups)
@@ -27,6 +29,7 @@ Options:
     --debug           Print raw events to stderr, no TUI
 
 Examples:
+    uv run ftl2_htop.py web1.example.com web2.example.com
     uv run ftl2_htop.py -i inventory.yml
     uv run ftl2_htop.py -S .ftl2-state.json -g scale
     uv run ftl2_htop.py -i inventory.yml -g webservers databases --interval 1
@@ -306,10 +309,17 @@ async def main() -> None:
         action="store_true",
         help="Print raw events to stderr (disables TUI)",
     )
+    parser.add_argument(
+        "hosts",
+        nargs="*",
+        help="Hostnames to monitor (builds inventory dynamically)",
+    )
     args = parser.parse_args()
 
     automation_kwargs = {"gate_subsystem": True}
-    if args.inventory:
+    if args.hosts:
+        automation_kwargs["inventory"] = ",".join(args.hosts) + ","
+    elif args.inventory:
         automation_kwargs["inventory"] = args.inventory
     elif args.state:
         automation_kwargs["state_file"] = args.state
