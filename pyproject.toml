@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "ftl2-htop"
 version = "0.1.0"
@@ -7,8 +11,15 @@ dependencies = [
     "ftl2 @ git+https://github.com/benthomasson/ftl2",
     "rich",
     "psutil",
+    "textual>=0.50.0",
     "segment-analytics-python>=2.3.0",
 ]
 
 [project.scripts]
 ftl2-htop = "ftl2_htop:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ftl2_htop.py", "ftl2_htop_tui.py"]
+
+[tool.hatch.metadata]
+allow-direct-references = true

@@ -280,7 +280,7 @@ def render_dashboard() -> Group:
     return Group(*panels)
 
 
-async def main() -> None:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="FTL2 distributed system monitor"
     )
@@ -310,10 +310,20 @@ async def main() -> None:
         help="Print raw events to stderr (disables TUI)",
     )
     parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="Use Textual TUI (required for textual-serve)",
+    )
+    parser.add_argument(
         "hosts",
         nargs="*",
         help="Hostnames to monitor (builds inventory dynamically)",
     )
+    return parser
+
+
+async def main() -> None:
+    parser = _build_parser()
     args = parser.parse_args()
 
     automation_kwargs = {"gate_subsystem": True}
@@ -467,6 +477,17 @@ def _phone_home():
 
 def cli():
     _phone_home()
+    # Pre-parse to check for --tui before running main()
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--tui", action="store_true")
+    pre_args, _ = parser.parse_known_args()
+    if pre_args.tui:
+        from ftl2_htop_tui import run_tui
+        # Re-parse with the full parser from main()
+        full_parser = _build_parser()
+        args = full_parser.parse_args()
+        run_tui(args)
+        return
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
