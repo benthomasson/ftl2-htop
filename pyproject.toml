@@ -13,6 +13,7 @@ dependencies = [
     "psutil",
     "textual>=0.50.0",
     "segment-analytics-python>=2.3.0",
+    "websockets>=13.0",
 ]
 
 [project.scripts]

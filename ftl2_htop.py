@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["ftl2 @ git+https://github.com/benthomasson/ftl2", "rich", "psutil"]
+# dependencies = ["ftl2 @ git+https://github.com/benthomasson/ftl2", "rich", "psutil", "websockets>=13.0"]
 # requires-python = ">=3.13"
 # ///
 """Distributed system monitor TUI — live metrics from remote hosts via FTL2 gates.
@@ -268,6 +268,8 @@ def render_host(hostname: str, m: dict) -> Panel:
     )
 
 
+ws_port_active: int = 0
+
 def render_dashboard() -> Group:
     """Render the full dashboard with all hosts."""
     if not metrics_store:
@@ -276,6 +278,9 @@ def render_dashboard() -> Group:
     panels = []
     for hostname in sorted(metrics_store.keys()):
         panels.append(render_host(hostname, metrics_store[hostname]))
+
+    if ws_port_active:
+        panels.append(Text(f"  WebSocket: ws://0.0.0.0:{ws_port_active}", style="dim"))
 
     return Group(*panels)
 
@@ -313,6 +318,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--tui",
         action="store_true",
         help="Use Textual TUI (required for textual-serve)",
+    )
+    parser.add_argument(
+        "--ws-port",
+        type=int,
+        default=0,
+        help="WebSocket port for live metrics broadcast (e.g. 8765)",
     )
     parser.add_argument(
         "hosts",
@@ -397,7 +408,39 @@ async def main() -> None:
             await ftl.listen()
             return
 
+        # WebSocket broadcast for PWA live metrics
+        async def ws_broadcast(port):
+            import json
+            import websockets
+
+            clients = set()
+
+            async def handler(websocket):
+                clients.add(websocket)
+                try:
+                    async for _ in websocket:
+                        pass
+                finally:
+                    clients.discard(websocket)
+
+            server = await websockets.serve(handler, "0.0.0.0", port)
+            global ws_port_active
+            ws_port_active = port
+            while True:
+                if clients and metrics_store:
+                    msg = json.dumps(metrics_store, default=str)
+                    dead = set()
+                    for ws in clients:
+                        try:
+                            await ws.send(msg)
+                        except Exception:
+                            dead.add(ws)
+                    clients -= dead
+                await asyncio.sleep(2)
+
         # Run live display and event listener concurrently
+        tasks = []
+
         with Live(
             render_dashboard(), refresh_per_second=2, screen=True
         ) as live:
@@ -407,10 +450,12 @@ async def main() -> None:
                     live.update(render_dashboard())
                     await asyncio.sleep(0.5)
 
-            await asyncio.gather(
-                ftl.listen(),
-                update_display(),
-            )
+            tasks.append(ftl.listen())
+            tasks.append(update_display())
+            if args.ws_port:
+                tasks.append(ws_broadcast(args.ws_port))
+
+            await asyncio.gather(*tasks)
 
 
 def _phone_home():
